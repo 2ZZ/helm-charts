@@ -57,16 +57,20 @@ const buildCharts = async (chartSourcesDir, chartDestDir, chartVersion, appVersi
     }
 };
 
-const buildIndex = async (chartsDestDir) => {
+const buildIndex = async (chartsDestDir, repository, absolute) => {
     console.log(`Building helm charts repo index.`);
-    await helm(`repo index ${chartsDestDir}`);
+    if (absolute) {
+        await helm(`repo index ${chartsDestDir} --url ${repository}`);
+    } else {
+        await helm(`repo index ${chartsDestDir}`);
+    }
 };
 
-const build = async ({ source, output, version, appVersion }) => {
+const build = async ({ source, output, version, appVersion, repository, absolute }) => {
     try {
         ensureDirsReady(output);
         await buildCharts(source, output, version, appVersion);
-        await buildIndex(output);
+        await buildIndex(output, repository, absolute);
     } catch(e) {
         console.error(e);
         throw new Error(`Charts build has failed. ${e.message}`);
@@ -80,6 +84,8 @@ module.exports = {
             .addArgument(['-s', '--source'], { help: 'A directory with chart sources. It can either be a directory with a single Charts.yaml file or with subdirectories defining multiple charts', defaultValue: '.' })
             .addArgument(['-o', '--output'], { help: 'A directory chart packages should be produced in', defaultValue: 'charts-output' })
             .addArgument(['-v', '--version'], { help: 'A chart version if different than set in \'Chart.yaml\'' })
+            .addArgument(['-r', '--repository'], { help: 'Helm charts repository URL' })
+            .addArgument(['-a', '--absolute'], { help: 'Create absolute URL for .tgzs in index.yaml' })
             .addArgument('--appVersion', { help: 'An appVersion if different than set in \'Chart.yaml\'' })
             .setHandler(build);
     }
